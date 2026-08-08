@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import prisma from "../lib/prisma.js";
 import { sendVerificationEmail } from "../services/email.service.js";
 
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const signup = async (req, res) => {
   try {
@@ -13,24 +14,94 @@ export const signup = async (req, res) => {
       confirmPassword,
     } = req.body;
 
-    // Validate required fields
+    // ==========================================
+    // REQUIRED FIELDS
+    // ==========================================
+
     if (!username || !email || !password || !confirmPassword) {
       return res.status(400).json({
         message: "All fields are required.",
       });
     }
 
-    // Check passwords
+    // ==========================================
+    // TRIM USERNAME AND EMAIL
+    // ==========================================
+
+    const cleanUsername = username.trim();
+    const cleanEmail = email.trim();
+
+    // ==========================================
+    // USERNAME VALIDATION
+    // ==========================================
+
+    if (cleanUsername.length < 3) {
+      return res.status(400).json({
+        message: "Username must be at least 3 characters.",
+      });
+    }
+
+    if (cleanUsername.length > 20) {
+      return res.status(400).json({
+        message: "Username must not exceed 20 characters.",
+      });
+    }
+
+    // ==========================================
+    // EMAIL VALIDATION
+    // ==========================================
+
+    if (!emailPattern.test(cleanEmail)) {
+      return res.status(400).json({
+        message: "Please enter a valid email address.",
+      });
+    }
+
+    if (cleanEmail.length > 20) {
+      return res.status(400).json({
+        message: "Email must not exceed 20 characters.",
+      });
+    }
+
+    // ==========================================
+    // PASSWORD VALIDATION
+    // ==========================================
+
+    if (password.length < 8) {
+      return res.status(400).json({
+        message: "Password must be at least 8 characters.",
+      });
+    }
+
+    if (password.length > 20) {
+      return res.status(400).json({
+        message: "Password must not exceed 20 characters.",
+      });
+    }
+
+    // ==========================================
+    // CONFIRM PASSWORD VALIDATION
+    // ==========================================
+
+    if (confirmPassword.length > 20) {
+      return res.status(400).json({
+        message: "Confirm password must not exceed 20 characters.",
+      });
+    }
+
     if (password !== confirmPassword) {
       return res.status(400).json({
         message: "Passwords do not match.",
       });
     }
 
-    // Check if email already exists
+    // ==========================================
+    // CHECK IF EMAIL ALREADY EXISTS
+    // ==========================================
+
     const existingEmail = await prisma.user.findUnique({
       where: {
-        email,
+        email: cleanEmail,
       },
     });
 
@@ -40,10 +111,13 @@ export const signup = async (req, res) => {
       });
     }
 
-    // Check username
+    // ==========================================
+    // CHECK USERNAME
+    // ==========================================
+
     const existingUsername = await prisma.user.findUnique({
       where: {
-        username,
+        username: cleanUsername,
       },
     });
 
@@ -53,39 +127,61 @@ export const signup = async (req, res) => {
       });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // ==========================================
+    // HASH PASSWORD
+    // ==========================================
 
-    // Generate 6-digit verification code
-    const verificationCode = Math.floor(
-      100000 + Math.random() * 900000
-    ).toString();
-
-    // Code expires in 10 minutes
-    const verificationExpires = new Date(
-      Date.now() + 10 * 60 * 1000
+    const hashedPassword = await bcrypt.hash(
+      password,
+      10,
     );
 
-    // Create user
+    // ==========================================
+    // GENERATE VERIFICATION CODE
+    // ==========================================
+
+    const verificationCode = Math.floor(
+      100000 + Math.random() * 900000,
+    ).toString();
+
+    // ==========================================
+    // CODE EXPIRES IN 10 MINUTES
+    // ==========================================
+
+    const verificationExpires = new Date(
+      Date.now() + 10 * 60 * 1000,
+    );
+
+    // ==========================================
+    // CREATE USER
+    // ==========================================
+
     await prisma.user.create({
       data: {
-        username,
-        email,
+        username: cleanUsername,
+        email: cleanEmail,
         password: hashedPassword,
         verificationCode,
         verificationExpires,
       },
     });
 
-    // Send email
+    // ==========================================
+    // SEND VERIFICATION EMAIL
+    // ==========================================
+
     await sendVerificationEmail(
-      email,
-      verificationCode
+      cleanEmail,
+      verificationCode,
     );
+
+    // ==========================================
+    // RESPONSE
+    // ==========================================
 
     return res.status(201).json({
       message: "Verification code sent to your email.",
-      email,
+      email: cleanEmail,
     });
 
   } catch (error) {
@@ -97,21 +193,62 @@ export const signup = async (req, res) => {
   }
 };
 
+
+// ======================================================
+// VERIFY EMAIL
+// ======================================================
+
 export const verifyEmail = async (req, res) => {
   try {
     const { email, code } = req.body;
 
-    // Validate input
+    // ==========================================
+    // REQUIRED FIELDS
+    // ==========================================
+
     if (!email || !code) {
       return res.status(400).json({
-        message: "Email and verification code are required.",
+        message:
+          "Email and verification code are required.",
       });
     }
 
-    // Find user
+    const cleanEmail = email.trim();
+
+    // ==========================================
+    // EMAIL VALIDATION
+    // ==========================================
+
+    if (!emailPattern.test(cleanEmail)) {
+      return res.status(400).json({
+        message: "Please enter a valid email address.",
+      });
+    }
+
+    if (cleanEmail.length > 20) {
+      return res.status(400).json({
+        message: "Email must not exceed 20 characters.",
+      });
+    }
+
+    // ==========================================
+    // CODE VALIDATION
+    // ==========================================
+
+    if (!/^\d{6}$/.test(code)) {
+      return res.status(400).json({
+        message:
+          "Verification code must be exactly 6 digits.",
+      });
+    }
+
+    // ==========================================
+    // FIND USER
+    // ==========================================
+
     const user = await prisma.user.findUnique({
       where: {
-        email,
+        email: cleanEmail,
       },
     });
 
@@ -121,21 +258,30 @@ export const verifyEmail = async (req, res) => {
       });
     }
 
-    // Check if already verified
+    // ==========================================
+    // CHECK IF ALREADY VERIFIED
+    // ==========================================
+
     if (user.isVerified) {
       return res.status(400).json({
         message: "Email is already verified.",
       });
     }
 
-    // Check verification code
+    // ==========================================
+    // CHECK VERIFICATION CODE
+    // ==========================================
+
     if (user.verificationCode !== code) {
       return res.status(400).json({
         message: "Invalid verification code.",
       });
     }
 
-    // Check expiration
+    // ==========================================
+    // CHECK EXPIRATION
+    // ==========================================
+
     if (
       !user.verificationExpires ||
       user.verificationExpires < new Date()
@@ -145,10 +291,13 @@ export const verifyEmail = async (req, res) => {
       });
     }
 
-    // Verify user
+    // ==========================================
+    // VERIFY USER
+    // ==========================================
+
     await prisma.user.update({
       where: {
-        email,
+        email: cleanEmail,
       },
       data: {
         isVerified: true,
@@ -156,6 +305,10 @@ export const verifyEmail = async (req, res) => {
         verificationExpires: null,
       },
     });
+
+    // ==========================================
+    // RESPONSE
+    // ==========================================
 
     return res.status(200).json({
       message: "Email verified successfully.",
@@ -165,14 +318,24 @@ export const verifyEmail = async (req, res) => {
     console.error("Verification error:", error);
 
     return res.status(500).json({
-      message: "Something went wrong during email verification.",
+      message:
+        "Something went wrong during email verification.",
     });
   }
 };
 
+
+// ======================================================
+// LOGIN
+// ======================================================
+
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    // ==========================================
+    // REQUIRED FIELDS
+    // ==========================================
 
     if (!email || !password) {
       return res.status(400).json({
@@ -180,10 +343,47 @@ export const login = async (req, res) => {
       });
     }
 
-    // Find user
+    const cleanEmail = email.trim();
+
+    // ==========================================
+    // EMAIL VALIDATION
+    // ==========================================
+
+    if (!emailPattern.test(cleanEmail)) {
+      return res.status(400).json({
+        message: "Please enter a valid email address.",
+      });
+    }
+
+    if (cleanEmail.length > 20) {
+      return res.status(400).json({
+        message: "Email must not exceed 20 characters.",
+      });
+    }
+
+    // ==========================================
+    // PASSWORD VALIDATION
+    // ==========================================
+
+    if (password.length < 8) {
+      return res.status(400).json({
+        message: "Password must be at least 8 characters.",
+      });
+    }
+
+    if (password.length > 20) {
+      return res.status(400).json({
+        message: "Password must not exceed 20 characters.",
+      });
+    }
+
+    // ==========================================
+    // FIND USER
+    // ==========================================
+
     const user = await prisma.user.findUnique({
       where: {
-        email,
+        email: cleanEmail,
       },
     });
 
@@ -193,17 +393,23 @@ export const login = async (req, res) => {
       });
     }
 
-    // Check if email is verified
+    // ==========================================
+    // CHECK EMAIL VERIFICATION
+    // ==========================================
+
     if (!user.isVerified) {
       return res.status(403).json({
         message: "Please verify your email first.",
       });
     }
 
-    // Check password
+    // ==========================================
+    // CHECK PASSWORD
+    // ==========================================
+
     const passwordMatch = await bcrypt.compare(
       password,
-      user.password
+      user.password,
     );
 
     if (!passwordMatch) {
@@ -212,7 +418,10 @@ export const login = async (req, res) => {
       });
     }
 
-    // Create JWT
+    // ==========================================
+    // CREATE JWT
+    // ==========================================
+
     const token = jwt.sign(
       {
         userId: user.id,
@@ -221,12 +430,17 @@ export const login = async (req, res) => {
       process.env.JWT_SECRET,
       {
         expiresIn: "1d",
-      }
+      },
     );
+
+    // ==========================================
+    // RESPONSE
+    // ==========================================
 
     return res.status(200).json({
       message: "Login successful.",
       token,
+
       user: {
         id: user.id,
         username: user.username,

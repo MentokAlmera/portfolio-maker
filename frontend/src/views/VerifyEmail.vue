@@ -1,54 +1,133 @@
 <template>
-  <div
-    class="flex min-h-screen items-center
-           justify-center bg-white px-6"
-  >
+  <div class="min-h-screen flex items-center justify-center bg-[#f8f3ed] px-6">
+    <div class="w-full max-w-md text-center">
 
-    <div
-      class="w-full max-w-3xl rounded-3xl
-             bg-[#ebe7e2] px-8 py-12
-             text-center text-[#70453c]"
-    >
-
-      <h1 class="font-serif text-xl font-black">
-        Verification code sent! 📧
+      <!-- Title -->
+      <h1 class="font-serif text-5xl font-black text-[#70453c]">
+        Verify Your Email
       </h1>
 
-      <p class="mx-auto mt-5 max-w-2xl">
-        A verification code has been sent to your
-        email address. Please check your inbox
-        and enter the code to verify your account.
+      <p class="mt-4 text-[#70453c]">
+        We sent a verification code to
       </p>
 
-      <p class="mt-2">
-        If you don't see the email, please check
-        your spam or junk folder.
+      <p class="mt-1 font-semibold text-[#70453c]">
+        {{ email }}
       </p>
 
-
-      <!-- CODE INPUTS -->
-      <div class="mt-8 flex justify-center gap-3">
+      <!-- Verification Form -->
+      <form
+        @submit.prevent="handleVerification"
+        class="mt-8"
+      >
 
         <input
-          v-for="n in 6"
-          :key="n"
-          maxlength="1"
-          class="h-16 w-16 rounded-2xl
-                 bg-white text-center text-2xl
-                 font-bold outline-none"
+          v-model="code"
+          type="text"
+          inputmode="numeric"
+          maxlength="6"
+          placeholder="Enter 6-digit code"
+          required
+          class="w-full rounded-lg border border-[#d8c5b8] bg-white px-4 py-4 text-center text-2xl tracking-[0.5em] text-[#70453c] outline-none focus:ring-2 focus:ring-[#70453c]"
         />
 
-      </div>
+        <!-- Error -->
+        <p
+          v-if="errorMessage"
+          class="mt-3 text-sm text-red-600"
+        >
+          {{ errorMessage }}
+        </p>
 
+        <!-- Success -->
+        <p
+          v-if="successMessage"
+          class="mt-3 text-sm text-green-600"
+        >
+          {{ successMessage }}
+        </p>
 
-      <button
-        class="mt-8 rounded-full bg-[#70453c]
-               px-10 py-2 font-bold text-white"
-      >
-        VERIFY
-      </button>
+        <!-- Verify Button -->
+        <button
+          type="submit"
+          :disabled="loading || code.length !== 6"
+          class="mt-6 w-full rounded-lg bg-[#70453c] px-4 py-3 font-semibold text-white transition hover:bg-[#5c3831] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {{ loading ? "Verifying..." : "Verify Email" }}
+        </button>
+
+      </form>
+
+      <!-- Back to Login -->
+      <p class="mt-6 text-sm text-[#70453c]">
+        Already verified?
+
+        <button
+          type="button"
+          @click="$router.push('/login')"
+          class="font-bold underline"
+        >
+          Login
+        </button>
+      </p>
 
     </div>
-
   </div>
 </template>
+
+<script setup>
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import { verifyEmail } from "../services/auth.service.js";
+
+const router = useRouter();
+
+const email = ref(
+  localStorage.getItem("verificationEmail") || ""
+);
+
+const code = ref("");
+
+const loading = ref(false);
+const errorMessage = ref("");
+const successMessage = ref("");
+
+const handleVerification = async () => {
+  errorMessage.value = "";
+  successMessage.value = "";
+
+  if (!email.value) {
+    errorMessage.value = "Email address not found.";
+    return;
+  }
+
+  if (code.value.length !== 6) {
+    errorMessage.value = "Please enter the 6-digit verification code.";
+    return;
+  }
+
+  loading.value = true;
+
+  try {
+    await verifyEmail(email.value, code.value);
+
+    successMessage.value = "Email verified successfully!";
+
+    // Remove temporary email
+    localStorage.removeItem("verificationEmail");
+
+    // Go to login after verification
+    setTimeout(() => {
+      router.push("/login");
+    }, 1000);
+
+  } catch (error) {
+    errorMessage.value =
+      error.response?.data?.message ||
+      "Verification failed. Please try again.";
+
+  } finally {
+    loading.value = false;
+  }
+};
+</script>

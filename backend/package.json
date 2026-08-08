@@ -7,11 +7,18 @@
     "start": "node src/server.js"
   },
   "dependencies": {
-    "cors": "...",
-    "dotenv": "...",
-    "express": "..."
+    "@prisma/adapter-pg": "^7.9.1",
+    "@prisma/client": "^7.9.1",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^7.0.5",
+    "pg": "^8.16.3"
   },
   "devDependencies": {
-    "nodemon": "..."
+    "nodemon": "^3.1.10",
+    "prisma": "^7.9.1"
   }
 }

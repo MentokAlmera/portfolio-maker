@@ -1,101 +1,114 @@
 <template>
-  <div class="min-h-screen bg-white px-6 py-10 text-[#70453c]">
+  <div class="min-h-screen flex items-center justify-center bg-[#f8f3ed] px-6">
+    <div class="w-full max-w-md">
 
-    <!-- BRAND -->
-    <div class="mx-auto max-w-6xl">
-
-      <h1
-        class="font-serif text-5xl font-black"
-      >
-        AGEEMAKE
+      <h1 class="text-center font-serif text-5xl font-black text-[#70453c]">
+        Create Account
       </h1>
 
-      <h2
-        class="mt-2 font-serif text-xl font-black"
-      >
-        MAKE YOUR PORTFOLIO NOW
-      </h2>
+      <p class="mt-3 text-center text-[#70453c]">
+        Create your AGEEMAKE account
+      </p>
 
-    </div>
+      <form @submit.prevent="handleSignup" class="mt-8 space-y-4">
 
+        <input
+          v-model="form.username"
+          type="text"
+          placeholder="Username"
+          required
+          class="w-full rounded-lg border border-[#d8c5b8] bg-white px-4 py-3 outline-none focus:ring-2 focus:ring-[#70453c]"
+        />
 
-    <!-- SIGN UP FORM -->
-    <div class="mx-auto mt-10 max-w-6xl">
+        <input
+          v-model="form.email"
+          type="email"
+          placeholder="Email"
+          required
+          class="w-full rounded-lg border border-[#d8c5b8] bg-white px-4 py-3 outline-none focus:ring-2 focus:ring-[#70453c]"
+        />
 
-      <div
-        class="rounded-3xl bg-[#ebe7e2]
-               p-10"
-      >
+        <input
+          v-model="form.password"
+          type="password"
+          placeholder="Password"
+          required
+          class="w-full rounded-lg border border-[#d8c5b8] bg-white px-4 py-3 outline-none focus:ring-2 focus:ring-[#70453c]"
+        />
 
-        <div class="grid gap-8 md:grid-cols-2">
+        <input
+          v-model="form.confirmPassword"
+          type="password"
+          placeholder="Confirm Password"
+          required
+          class="w-full rounded-lg border border-[#d8c5b8] bg-white px-4 py-3 outline-none focus:ring-2 focus:ring-[#70453c]"
+        />
 
-          <!-- USERNAME -->
-          <div>
-            <label>username</label>
-
-            <input
-              type="text"
-              class="mt-2 w-full rounded-full
-                     bg-white px-5 py-3
-                     outline-none"
-            />
-          </div>
-
-
-          <!-- EMAIL -->
-          <div>
-            <label>email</label>
-
-            <input
-              type="email"
-              class="mt-2 w-full rounded-full
-                     bg-white px-5 py-3
-                     outline-none"
-            />
-          </div>
-
-
-          <!-- PASSWORD -->
-          <div>
-            <label>password</label>
-
-            <input
-              type="password"
-              class="mt-2 w-full rounded-full
-                     bg-white px-5 py-3
-                     outline-none"
-            />
-          </div>
-
-
-          <!-- CONFIRM PASSWORD -->
-          <div>
-            <label>confirm password</label>
-
-            <input
-              type="password"
-              class="mt-2 w-full rounded-full
-                     bg-white px-5 py-3
-                     outline-none"
-            />
-          </div>
-
-        </div>
-
+        <p v-if="errorMessage" class="text-sm text-red-600">
+          {{ errorMessage }}
+        </p>
 
         <button
-          class="float-right mt-10 rounded-full
-                 bg-white px-12 py-2 text-xl
-                 font-bold text-[#70453c]"
+          type="submit"
+          :disabled="loading"
+          class="w-full rounded-lg bg-[#70453c] px-4 py-3 font-semibold text-white transition hover:bg-[#5c3831] disabled:opacity-50"
         >
-          SIGN UP
+          {{ loading ? "Creating account..." : "Sign Up" }}
         </button>
 
-        <div class="clear-both"></div>
+      </form>
 
-      </div>
+      <p class="mt-6 text-center text-sm text-[#70453c]">
+        Already have an account?
+        <button
+          @click="$router.push('/login')"
+          class="font-bold underline"
+        >
+          Login
+        </button>
+      </p>
 
     </div>
-
   </div>
 </template>
+
+<script setup>
+import { reactive, ref } from "vue";
+import { useRouter } from "vue-router";
+import { signup } from "../services/auth.service.js";
+
+const router = useRouter();
+
+const form = reactive({
+  username: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
+});
+
+const loading = ref(false);
+const errorMessage = ref("");
+
+const handleSignup = async () => {
+  errorMessage.value = "";
+  loading.value = true;
+
+  try {
+    await signup(form);
+
+    // Save email temporarily for the verification page
+    localStorage.setItem("verificationEmail", form.email);
+
+    // Go to verification page
+    router.push("/verify-email");
+
+  } catch (error) {
+    errorMessage.value =
+      error.response?.data?.message ||
+      "Something went wrong. Please try again.";
+
+  } finally {
+    loading.value = false;
+  }
+};
+</script>

@@ -57,12 +57,6 @@ export const signup = async (req, res) => {
       });
     }
 
-    if (cleanEmail.length > 20) {
-      return res.status(400).json({
-        message: "Email must not exceed 20 characters.",
-      });
-    }
-
     // ==========================================
     // PASSWORD VALIDATION
     // ==========================================
@@ -225,12 +219,6 @@ export const verifyEmail = async (req, res) => {
       });
     }
 
-    if (cleanEmail.length > 20) {
-      return res.status(400).json({
-        message: "Email must not exceed 20 characters.",
-      });
-    }
-
     // ==========================================
     // CODE VALIDATION
     // ==========================================
@@ -355,12 +343,6 @@ export const login = async (req, res) => {
       });
     }
 
-    if (cleanEmail.length > 20) {
-      return res.status(400).json({
-        message: "Email must not exceed 20 characters.",
-      });
-    }
-
     // ==========================================
     // PASSWORD VALIDATION
     // ==========================================
@@ -429,7 +411,8 @@ export const login = async (req, res) => {
       },
       process.env.JWT_SECRET,
       {
-        expiresIn: "1d",
+        // TOKEN EXPIRES AFTER 1 HOUR
+        expiresIn: "1h",
       },
     );
 

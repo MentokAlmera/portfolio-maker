@@ -5,6 +5,9 @@ import Login from "../views/Login.vue";
 import Signup from "../views/Signup.vue";
 import VerifyEmail from "../views/VerifyEmail.vue";
 import Home from "../views/Home.vue";
+import Projects from "../views/Projects.vue";
+import Create from "../views/Create.vue";
+import Portfolio from "../views/Portfolio.vue";
 
 const routes = [
   {
@@ -42,6 +45,28 @@ const routes = [
       requiresAuth: true,
     },
   },
+
+  {
+    path: "/projects",
+    name: "Projects",
+    component: Projects,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: "/create",
+    name: "Create",
+    component: Create,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+
+  {
+    path: "/portfolio",
+    component: () => import("../views/Portfolio.vue"),
+  },
 ];
 
 const router = createRouter({
@@ -51,9 +76,7 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const token = localStorage.getItem("token");
-  const verificationEmail = localStorage.getItem(
-    "verificationEmail"
-  );
+  const verificationEmail = localStorage.getItem("verificationEmail");
 
   // 🔒 Protect Home
   if (to.meta.requiresAuth && !token) {
@@ -61,18 +84,12 @@ router.beforeEach((to) => {
   }
 
   // 🔒 Protect Verify Email
-  if (
-    to.meta.requiresVerification &&
-    !verificationEmail
-  ) {
+  if (to.meta.requiresVerification && !verificationEmail) {
     return "/signup";
   }
 
   // Prevent logged-in users from accessing Login/Signup
-  if (
-    (to.path === "/login" || to.path === "/signup") &&
-    token
-  ) {
+  if ((to.path === "/login" || to.path === "/signup") && token) {
     return "/home";
   }
 
